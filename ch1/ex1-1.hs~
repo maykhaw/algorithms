@@ -1,0 +1,47 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE PartialTypeSignatures #-}
+import Data.Array.MArray
+import Data.Array.ST
+import Data.Array
+import Control.Monad
+import Test.QuickCheck
+import qualified Data.List as List
+
+-- insertion sort in a mutable array
+
+insertSort :: forall a. (Ord a) => Array Int a -> Array Int a
+insertSort a' = runSTArray $ do
+  a <- thaw a'
+  (bot :: Int, top :: Int) <- getBounds a
+  let 
+      f j = if top < j then return () 
+                       else do (j' :: a) <- readArray a j
+                               i <- insertA j (j - 1)
+                               f (j + 1) 
+      insertA j i = do
+        if (i > bot) then do
+          i' <- readArray a i
+          j' <- readArray a j
+          if (i' < j') then do swap j i a
+                               insertA j (i -1)
+            else writeArray a i j' 
+          else return ()
+  f bot
+  return a
+
+-- swaps elements at indices x and y in the array
+swap x y array = do
+  x' <- readArray array x
+  y' <- readArray array y
+  writeArray array x y' 
+  writeArray array y x' 
+
+
+makeListArray :: [a] -> Array Int a
+makeListArray a = listArray (1, length a) a
+
+runTest :: [Int] -> Property
+runTest a = let a' = makeListArray a
+                sortl = makeListArray $ List.sort a in
+            sortl === insertSort a'
+

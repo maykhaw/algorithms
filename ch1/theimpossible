@@ -1,0 +1,39 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE PartialTypeSignatures #-}
+import Data.Array.MArray
+import Data.Array.ST
+import Data.Array
+import Control.Monad
+
+-- insertion sort in a mutable array
+
+insertSort :: forall a. (Ord a) => Array Int a -> Array Int a
+insertSort a' = runSTArray $ do
+  a <- thaw a'
+  (bot :: Int, top :: Int) <- getBounds a
+  let 
+      f j = if top < j then _
+                       else do (j' :: a) <- readArray a j
+                               i <- insertA j (j - 1)
+                               writeArray a i j' 
+                               f (j + 1) 
+      insertA :: Int -> Int -> _ Int
+      insertA j i = do
+        if (i > 0) then do
+          i' <- readArray a i
+          j' <- readArray a j
+          if (i' < j') then do swap j i a
+                               insertA j (i -1)
+            else return i
+          else return i
+  f bot
+  return a
+
+-- swaps elements at indices x and y in the array
+swap x y array = do
+  x' <- readArray array x
+  y' <- readArray array y
+  writeArray array x y' 
+  writeArray array y x' 
+
+
